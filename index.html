@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudCash — Student Finance Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #7c5cfc;
+    --accent2: #fc5c7d;
+    --accent3: #5cf4c8;
+    --accent4: #fcb85c;
+    --text: #f0f0ff;
+    --text2: #9999bb;
+    --text3: #6666aa;
+    --income: #5cf4c8;
+    --expense: #fc5c7d;
+    --saving: #7c5cfc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRAIN OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent3); -webkit-text-fill-color: var(--accent3); }
+  .nav-tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid var(--border);
+  }
+  .nav-tab {
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text2);
+    border: none;
+    background: transparent;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .nav-tab.active {
+    background: var(--accent);
+    color: white;
+  }
+  .nav-tab:hover:not(.active) { color: var(--text); background: var(--surface2); }
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--text2);
+  }
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.75rem; color: white;
+  }
+
+  /* PAGES */
+  .page { display: none; padding-top: 70px; min-height: 100vh; }
+  .page.active { display: block; }
+
+  /* ───── DASHBOARD ───── */
+  .dashboard-grid {
+    padding: 1.5rem 2rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    opacity: 0.08;
+  }
+  .stat-card.income::after { background: var(--income); }
+  .stat-card.expense::after { background: var(--expense); }
+  .stat-card.saving::after { background: var(--saving); }
+  .stat-label { font-size: 0.75rem; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700; }
+  .stat-value.income { color: var(--income); }
+  .stat-value.expense { color: var(--expense); }
+  .stat-value.saving { color: var(--saving); }
+  .stat-change { font-size: 0.75rem; color: var(--text3); margin-top: 0.3rem; }
+  .stat-change span { color: var(--income); }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 1rem;
+    letter-spacing: -0.3px;
+  }
+
+  .two-col { grid-column: span 2; }
+  .full-col { grid-column: span 3; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+  }
+
+  /* BUDGET BAR */
+  .budget-item { margin-bottom: 1rem; }
+  .budget-meta { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text2); margin-bottom: 0.4rem; }
+  .budget-meta strong { color: var(--text); }
+  .bar-track { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+  .bar-fill.food { background: linear-gradient(90deg, var(--accent4), #fc855c); }
+  .bar-fill.transport { background: linear-gradient(90deg, var(--accent), #a05cfc); }
+  .bar-fill.study { background: linear-gradient(90deg, var(--accent3), #5ccff4); }
+  .bar-fill.fun { background: linear-gradient(90deg, var(--accent2), #fc5ca0); }
+  .bar-fill.other { background: linear-gradient(90deg, #999, #666); }
+
+  /* RECENT TXN */
+  .txn-list { display: flex; flex-direction: column; gap: 0.6rem; max-height: 280px; overflow-y: auto; }
+  .txn-list::-webkit-scrollbar { width: 4px; }
+  .txn-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .txn-item {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .txn-item:hover { border-color: var(--border); }
+  .txn-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .txn-info { flex: 1; }
+  .txn-name { font-size: 0.83rem; font-weight: 500; }
+  .txn-cat { font-size: 0.72rem; color: var(--text3); }
+  .txn-amt { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 600; }
+  .txn-amt.neg { color: var(--expense); }
+  .txn-amt.pos { color: var(--income); }
+
+  /* MINI DONUT */
+  .donut-wrap { display: flex; align-items: center; gap: 1.5rem; }
+  .donut-legend { display: flex; flex-direction: column; gap: 0.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--text2); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ADD EXPENSE FORM */
+  .add-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+  .form-group.full { grid-column: span 2; }
+  label { font-size: 0.75rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  .btn {
+    border: none; cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: #9070ff; transform: translateY(-1px); }
+  .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.78rem; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ───── SUGGESTIONS ───── */
+  .suggestions-page { padding: 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .suggestions-page .page-header {
+    margin-bottom: 1.5rem;
+  }
+  .page-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .page-header p { color: var(--text2); font-size: 0.85rem; margin-top: 0.3rem; }
+
+  .suggestion-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .stab {
+    padding: 0.45rem 1rem;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .stab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .suggestion-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .sug-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .sug-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .sug-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+  }
+  .sug-card.freelance::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .sug-card.stocks::before { background: linear-gradient(90deg, var(--income), #5cf4a0); }
+  .sug-card.savings::before { background: linear-gradient(90deg, var(--accent4), #fcdf5c); }
+  .sug-card.gigs::before { background: linear-gradient(90deg, var(--accent2), #fc8c5c); }
+  .sug-card.crypto::before { background: linear-gradient(90deg, #f7931a, #fcdf5c); }
+  .sug-card.skills::before { background: linear-gradient(90deg, var(--accent3), var(--accent)); }
+
+  .sug-icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+  .sug-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .sug-desc { font-size: 0.78rem; color: var(--text2); line-height: 1.5; margin-bottom: 0.75rem; }
+  .sug-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .sug-badge {
+    font-size: 0.68rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .sug-badge.green { background: rgba(92,244,200,0.1); color: var(--income); border-color: rgba(92,244,200,0.2); }
+  .sug-badge.purple { background: rgba(124,92,252,0.1); color: var(--accent); border-color: rgba(124,92,252,0.2); }
+  .sug-badge.orange { background: rgba(252,184,92,0.1); color: var(--accent4); border-color: rgba(252,184,92,0.2); }
+
+  /* STOCK MINI WIDGET */
+  .stock-widget {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+  }
+  .stock-list { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; }
+  .stock-item {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+  }
+  .stock-sym { font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; }
+  .stock-price { font-size: 1rem; font-weight: 500; margin: 0.2rem 0; }
+  .stock-chg { font-size: 0.72rem; font-weight: 600; }
+  .stock-chg.up { color: var(--income); }
+  .stock-chg.down { color: var(--expense); }
+
+  /* SPARKLINE */
+  .sparkline { margin-top: 0.5rem; }
+
+  /* ───── BLOG ───── */
+  .blog-page { padding: 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .blog-layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+
+  .post-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+  }
+  .post-card:hover { border-color: var(--accent); }
+  .post-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .post-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8rem; color: white;
+    flex-shrink: 0;
+  }
+  .post-meta { flex: 1; }
+  .post-author { font-size: 0.83rem; font-weight: 600; }
+  .post-time { font-size: 0.72rem; color: var(--text3); }
+  .post-group {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    background: rgba(124,92,252,0.15);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .post-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .post-body { font-size: 0.82rem; color: var(--text2); line-height: 1.6; margin-bottom: 1rem; }
+  .post-actions { display: flex; gap: 0.75rem; }
+  .post-action {
+    display: flex; align-items: center; gap: 0.35rem;
+    font-size: 0.78rem; color: var(--text3);
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    padding: 0;
+  }
+  .post-action:hover { color: var(--accent); }
+  .post-action.liked { color: var(--accent2); }
+
+  .post-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .post-tag {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text3);
+    border: 1px solid var(--border);
+  }
+
+  /* SIDEBAR */
+  .blog-sidebar { display: flex; flex-direction: column; gap: 1rem; }
+  .sidebar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.1rem;
+  }
+  .sidebar-title { font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.75rem; }
+
+  .group-item {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .group-item:last-child { border-bottom: none; }
+  .group-icon { font-size: 1.1rem; }
+  .group-name { font-size: 0.8rem; font-weight: 500; }
+  .group-members { font-size: 0.7rem; color: var(--text3); }
+  .join-btn {
+    margin-left: auto;
+    font-size: 0.68rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    background: rgba(124,92,252,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(124,92,252,0.3);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .join-btn:hover { background: var(--accent); color: white; }
+  .join-btn.joined { background: var(--surface2); color: var(--text3); border-color: var(--border); }
+
+  /* NEW POST */
+  .new-post-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  .new-post-box textarea {
+    width: 100%;
+    resize: none;
+    min-height: 80px;
+    margin-bottom: 0.75rem;
+  }
+  .new-post-footer { display: flex; justify-content: space-between; align-items: center; }
+  .post-opts { display: flex; gap: 0.5rem; }
+  .post-opt-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text3);
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .post-opt-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: var(--text);
+    z-index: 9998;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 280px;
+    box-shadow: 0 8px 32px rgba(124,92,252,0.2);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* MONTH SELECTOR */
+  .month-sel {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .month-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    padding: 0.35rem 0.65rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .month-btn:hover { color: var(--text); border-color: var(--accent); }
+  .month-name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; min-width: 90px; text-align: center; }
+
+  /* TAG PILL */
+  .tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.68rem; font-weight: 600; }
+  .tag-food { background: rgba(252,184,92,0.15); color: var(--accent4); }
+  .tag-transport { background: rgba(124,92,252,0.15); color: var(--accent); }
+  .tag-study { background: rgba(92,244,200,0.15); color: var(--accent3); }
+  .tag-fun { background: rgba(252,92,125,0.15); color: var(--accent2); }
+  .tag-income { background: rgba(92,244,200,0.15); color: var(--income); }
+
+  /* CANVAS CHART */
+  canvas { max-width: 100%; }
+
+  /* RESPONSIVE-ISH */
+  @media (max-width: 768px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .two-col, .full-col { grid-column: span 1; }
+    .suggestion-grid { grid-template-columns: 1fr; }
+    .blog-layout { grid-template-columns: 1fr; }
+    .stock-list { grid-template-columns: repeat(2,1fr); }
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  .page.active > * { animation: fadeIn 0.35s ease both; }
+  .page.active > *:nth-child(2) { animation-delay: 0.05s; }
+  .page.active > *:nth-child(3) { animation-delay: 0.1s; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Stud<span>Cash</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">📊 Dashboard</button>
+    <button class="nav-tab" onclick="showPage('suggestions')">💡 Suggestions</button>
+    <button class="nav-tab" onclick="showPage('blog')">💬 Community</button>
+  </div>
+  <div class="user-chip">
+    <div class="avatar">AK</div>
+    <span>Arjun K.</span>
+  </div>
+</nav>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════ DASHBOARD PAGE ═══════════════ -->
+<div class="page active" id="page-dashboard">
+  <div class="dashboard-grid">
+
+    <!-- Month Selector -->
+    <div class="full-col" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:0.25rem;">
+      <div class="month-sel">
+        <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="month-name" id="monthName">March 2026</div>
+        <button class="month-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('addModal').style.display='flex'">+ Add Expense</button>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stat-card income">
+      <div class="stat-label">Total Income</div>
+      <div class="stat-value income" id="statIncome">₹18,500</div>
+      <div class="stat-change">Stipend + Freelance · <span>+12%</span></div>
+    </div>
+    <div class="stat-card expense">
+      <div class="stat-label">Total Expenses</div>
+      <div class="stat-value expense" id="statExpense">₹12,340</div>
+      <div class="stat-change">Across 5 categories</div>
+    </div>
+    <div class="stat-card saving">
+      <div class="stat-label">Net Savings</div>
+      <div class="stat-value saving" id="statSaving">₹6,160</div>
+      <div class="stat-change">33% of income saved 🎯</div>
+    </div>
+
+    <!-- Budget Bars -->
+    <div class="card">
+      <div class="section-title">Budget Breakdown</div>
+      <div id="budgetBars">
+        <div class="budget-item">
+          <div class="budget-meta"><span>🍔 Food & Dining</span><strong>₹3,800 / ₹4,500</strong></div>
+          <div class="bar-track"><div class="bar-fill food" style="width:84%"></div></div>
+        </div>
+        <div class="budget-item">
+          <div class="budget-meta"><span>🚌 Transport</span><strong>₹1,200 / ₹2,000</strong></div>
+          <div class="bar-track"><div class="bar-fill transport" style="width:60%"></div></div>
+        </div>
+        <div class="budget-item">
+          <div class="budget-meta"><span>📚 Study & Books</span><strong>₹2,100 / ₹3,000</strong></div>
+          <div class="bar-track"><div class="bar-fill study" style="width:70%"></div></div>
+        </div>
+        <div class="budget-item">
+          <div class="budget-meta"><span>🎮 Entertainment</span><strong>₹980 / ₹1,500</strong></div>
+          <div class="bar-track"><div class="bar-fill fun" style="width:65%"></div></div>
+        </div>
+        <div class="budget-item">
+          <div class="budget-meta"><span>🏠 Rent / Other</span><strong>₹4,260 / ₹5,000</strong></div>
+          <div class="bar-track"><div class="bar-fill other" style="width:85%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donut Chart -->
+    <div class="card">
+      <div class="section-title">Spending Split</div>
+      <div class="donut-wrap">
+        <canvas id="donutChart" width="130" height="130"></canvas>
+        <div class="donut-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div>Food 31%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Transport 10%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Study 17%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Fun 8%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#888"></div>Rent 34%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card two-col">
+      <div class="section-title">Recent Transactions</div>
+      <div class="txn-list" id="txnList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Savings Tip -->
+    <div class="card" style="background: linear-gradient(135deg, rgba(124,92,252,0.12), rgba(92,244,200,0.06)); border-color: rgba(124,92,252,0.25);">
+      <div class="section-title">💡 Smart Tip</div>
+      <div id="smartTip" style="font-size:0.82rem;color:var(--text2);line-height:1.6;"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:1rem;" onclick="nextTip()">Next tip →</button>
+    </div>
+
+    <!-- Trend Chart -->
+    <div class="card full-col">
+      <div class="section-title">6-Month Spending Trend</div>
+      <canvas id="trendChart" height="60"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD EXPENSE MODAL -->
+<div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1.5rem;width:90%;max-width:440px;animation:fadeIn 0.2s ease;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;">Add Transaction</div>
+      <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+    <div class="add-form">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="txnType">
+          <option value="expense">💸 Expense</option>
+          <option value="income">💰 Income</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <input type="number" id="txnAmt" placeholder="0" />
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <input type="text" id="txnDesc" placeholder="e.g. Zomato order" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="txnCat">
+          <option value="food">🍔 Food</option>
+          <option value="transport">🚌 Transport</option>
+          <option value="study">📚 Study</option>
+          <option value="fun">🎮 Fun</option>
+          <option value="income">💰 Income</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="txnDate" />
+      </div>
+      <div class="form-group full" style="margin-top:0.25rem;">
+        <button class="btn btn-primary" onclick="addTransaction()">Add Transaction</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SUGGESTIONS PAGE ═══════════════ -->
+<div class="page" id="page-suggestions">
+  <div class="suggestions-page">
+    <div class="page-header">
+      <h1>Grow Your Money 💸</h1>
+      <p>Smart ways for students to earn more, save better, and invest early</p>
+    </div>
+
+    <div class="suggestion-tabs">
+      <button class="stab active" onclick="filterSuggestions('all',this)">All</button>
+      <button class="stab" onclick="filterSuggestions('income',this)">Side Income</button>
+      <button class="stab" onclick="filterSuggestions('invest',this)">Investing</button>
+      <button class="stab" onclick="filterSuggestions('save',this)">Save Smart</button>
+      <button class="stab" onclick="filterSuggestions('skills',this)">Build Skills</button>
+    </div>
+
+    <div class="suggestion-grid" id="sugGrid">
+      <!-- Cards rendered by JS -->
+    </div>
+
+    <!-- Stock Tracker -->
+    <div class="stock-widget" id="stockWidget">
+      <div class="section-title" style="margin-bottom:0.75rem;">📈 Student-Friendly Stocks & ETFs</div>
+      <div class="stock-list" id="stockList">
+        <!-- rendered by JS -->
+      </div>
+      <p style="font-size:0.7rem;color:var(--text3);margin-top:0.75rem;">* Prices are illustrative. Always DYOR. SIPs from ₹100/month via Zerodha / Groww.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ BLOG/COMMUNITY PAGE ═══════════════ -->
+<div class="page" id="page-blog">
+  <div class="blog-page">
+    <div class="page-header" style="margin-bottom:1.25rem;">
+      <h1 style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;">Community Hub 🤝</h1>
+      <p style="color:var(--text2);font-size:0.85rem;margin-top:0.3rem;">Talk money, share wins, learn from each other</p>
+    </div>
+
+    <div class="blog-layout">
+      <!-- Feed -->
+      <div>
+        <!-- New Post Box -->
+        <div class="new-post-box">
+          <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;">
+            <div class="avatar" style="flex-shrink:0;">AK</div>
+            <textarea id="newPostText" placeholder="Share a tip, ask a question, celebrate a win..."></textarea>
+          </div>
+          <div class="new-post-footer">
+            <div class="post-opts">
+              <button class="post-opt-btn" onclick="setPostGroup('Stocks & Investing')">📈 Stocks</button>
+              <button class="post-opt-btn" onclick="setPostGroup('Side Hustles')">💼 Side Hustle</button>
+              <button class="post-opt-btn" onclick="setPostGroup('Saving Tips')">🏦 Saving</button>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="submitPost()">Post</button>
+          </div>
+        </div>
+
+        <!-- Posts Feed -->
+        <div id="postsFeed"></div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="blog-sidebar">
+        <!-- Groups -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">🔥 Active Groups</div>
+          <div id="groupsList"></div>
+        </div>
+        <!-- Trending Tags -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">🏷️ Trending Topics</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('SIP')">#SIP</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('Freelance')">#Freelance</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('Budget101')">#Budget101</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('Zerodha')">#Zerodha</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('StipendLife')">#StipendLife</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('Crypto')">#Crypto</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('RemoteWork')">#RemoteWork</span>
+            <span class="post-tag" style="cursor:pointer;" onclick="filterByTag('NIFTY50')">#NIFTY50</span>
+          </div>
+        </div>
+        <!-- Leaderboard -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">🏆 Top Savers (March)</div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;" id="leaderboard"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let currentPage = 'dashboard';
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let monthIdx = 2; // March
+let currentYear = 2026;
+let selectedPostGroup = 'General';
+
+const tips = [
+  "🧋 Cutting 3 Zomato orders/week saves ~₹1,200/month — that's ₹14,400/year!",
+  "📱 Use UPI cashbacks wisely. PhonePe & Paytm often give ₹50-150 back per week.",
+  "📚 Share textbooks with classmates. A ₹600 book split 3 ways = ₹200 each.",
+  "🚲 Walk or cycle short distances. Save ₹500-800/month on autos.",
+  "💡 Cook 2-3 meals at home weekly. You'll save ₹2,000+ per month easily.",
+  "📊 Start a SIP with just ₹100/month. In 10 years at 12% CAGR = ₹23,000+.",
+  "🧾 Always ask for student discounts — Spotify, Notion, Adobe, JetBrains all offer them!",
+];
+let tipIdx = 0;
+
+let transactions = [
+  { id:1, type:'expense', desc:'Zomato Order', cat:'food', amt:320, date:'2026-03-22', icon:'🍔' },
+  { id:2, type:'income',  desc:'Freelance Design', cat:'income', amt:4500, date:'2026-03-21', icon:'💻' },
+  { id:3, type:'expense', desc:'Metro Pass', cat:'transport', amt:550, date:'2026-03-20', icon:'🚌' },
+  { id:4, type:'expense', desc:'Python Book', cat:'study', amt:450, date:'2026-03-19', icon:'📚' },
+  { id:5, type:'expense', desc:'Netflix (split)', cat:'fun', amt:180, date:'2026-03-18', icon:'🎮' },
+  { id:6, type:'income',  desc:'College Stipend', cat:'income', amt:8000, date:'2026-03-01', icon:'🎓' },
+];
+
+const suggestions = [
+  { id:1, class:'freelance', cat:['income','skills'], icon:'💻', title:'Freelance on Fiverr / Upwork', desc:'Design, code, write, edit videos. Students are making ₹10K-50K/month doing client projects in their free time.', badges:[{t:'₹5K-50K/mo',c:'green'},{t:'Remote',c:'purple'},{t:'Flexible',c:''}]},
+  { id:2, class:'stocks', cat:['invest'], icon:'📈', title:'Start SIP in Index Funds', desc:'Invest ₹500/month in NIFTY 50 ETFs via Zerodha or Groww. Historically ~12% CAGR — let compounding work.', badges:[{t:'Start ₹100/mo',c:'green'},{t:'Low Risk',c:'purple'},{t:'NIFTY 50',c:''}]},
+  { id:3, class:'savings', cat:['save'], icon:'🏦', title:'High-Yield Savings & FDs', desc:'Park emergency fund in a liquid mutual fund (5-6% returns) instead of idle savings. SBI, HDFC short-term FDs are solid.', badges:[{t:'5-6% returns',c:'green'},{t:'Safe',c:'purple'},{t:'FD/Liquid',c:''}]},
+  { id:4, class:'gigs', cat:['income'], icon:'🛵', title:'Gig Economy & Tuitions', desc:'Tutor juniors (₹300-600/hr), deliver on weekends, do local photography gigs. Real cash, quick turnaround.', badges:[{t:'₹2K-15K/mo',c:'green'},{t:'Weekends',c:''},{t:'Local',c:'orange'}]},
+  { id:5, class:'crypto', cat:['invest'], icon:'₿', title:'Crypto: Micro-Invest Wisely', desc:'Allocate only 5-10% of surplus to BTC/ETH. Use WazirX or CoinDCX, start with ₹500. High risk, high reward.', badges:[{t:'High Risk',c:''},{t:'BTC/ETH',c:'orange'},{t:'₹500 min',c:'green'}]},
+  { id:6, class:'skills', cat:['skills','income'], icon:'🎯', title:'Sell Notes & Templates', desc:'Create Notion templates, Canva designs, or study notes. Sell on Gumroad or Instamojo. Passive income for students!', badges:[{t:'Passive',c:'green'},{t:'Creative',c:'purple'},{t:'₹1K-10K/mo',c:''}]},
+];
+
+const stocksData = [
+  { sym:'NIFTY 50', price:'₹22,456', chg:'+0.82%', dir:'up', spark:[22100,22200,22050,22300,22400,22456] },
+  { sym:'RELIANCE', price:'₹2,876', chg:'-0.34%', dir:'down', spark:[2900,2880,2890,2870,2875,2876] },
+  { sym:'INFY',     price:'₹1,542', chg:'+1.12%', dir:'up',  spark:[1510,1520,1515,1530,1538,1542] },
+  { sym:'GOLD ETF', price:'₹6,312', chg:'+0.45%', dir:'up',  spark:[6280,6290,6295,6300,6308,6312] },
+];
+
+const groups = [
+  { icon:'📈', name:'Stocks & Investing', members:'2.4K', joined: false },
+  { icon:'💼', name:'Side Hustles', members:'1.8K', joined: true },
+  { icon:'🏦', name:'Saving Tips', members:'3.1K', joined: true },
+  { icon:'₿', name:'Crypto Talk', members:'990', joined: false },
+  { icon:'🎓', name:'Stipend Life', members:'4.2K', joined: false },
+];
+
+const postsData = [
+  { id:1, author:'Priya S.', avatar:'PS', color:'#7c5cfc', group:'Side Hustles', time:'2h ago', title:'Made ₹12K in March freelancing!', body:'Started taking Figma projects on Fiverr 3 months ago. This month finally crossed ₹12K. The trick is niche down — I only do mobile app UI. DM if you want tips!', tags:['Freelance','Fiverr','UI/UX'], likes:34, comments:12, liked:false },
+  { id:2, author:'Ravi M.', avatar:'RM', color:'#5cf4c8', group:'Stocks & Investing', time:'5h ago', title:'SIP update: 18 months in 🚀', body:'Started a ₹500/month SIP in NIFTY 50 ETF when I was in 2nd year. Now 18 months later — up 23%. Small amount but the habit is priceless. Time IN the market > timing the market.', tags:['SIP','NIFTY50','LongTerm'], likes:89, comments:27, liked:false },
+  { id:3, author:'Ananya K.', avatar:'AK', color:'#fc5c7d', group:'Saving Tips', time:'1d ago', title:'Student discounts you\'re probably missing', body:'JetBrains IDE — free with .edu email. Spotify student — ₹59/month. Notion — free pro plan. Microsoft 365 — free via college. Adobe CC — 60% off. Save ₹3-5K/year easily!', tags:['Budget101','Discounts','StipendLife'], likes:156, comments:44, liked:true },
+  { id:4, author:'Dev T.', avatar:'DT', color:'#fcb85c', group:'Crypto Talk', time:'2d ago', title:'My crypto strategy as a broke student', body:'Invest only what you can afford to lose. I put ₹500/month in BTC and ETH, 50-50. That\'s it. Don\'t touch it for 5 years. No altcoins, no FOMO trades. Simple.', tags:['Crypto','BTC','Strategy'], likes:67, comments:33, liked:false },
+];
+
+const leaderboard = [
+  { name:'Priya S.', saved:'₹8,200', pct:'44%', rank:1 },
+  { name:'Ravi M.', saved:'₹6,900', pct:'38%', rank:2 },
+  { name:'Ananya K.', saved:'₹6,160', pct:'33%', rank:3 },
+  { name:'Dev T.', saved:'₹4,800', pct:'29%', rank:4 },
+];
+
+// ─── INIT ───
+window.onload = () => {
+  setTodayDate();
+  renderTransactions();
+  renderDonut();
+  renderTrendChart();
+  renderSmartTip();
+  renderSuggestions('all');
+  renderStocks();
+  renderPosts(postsData);
+  renderGroups();
+  renderLeaderboard();
+};
+
+// ─── NAVIGATION ───
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(name === 'blog' ? 'community' : name)) t.classList.add('active');
+  });
+  currentPage = name;
+}
+
+// ─── MONTH ───
+function changeMonth(dir) {
+  monthIdx += dir;
+  if (monthIdx > 11) { monthIdx = 0; currentYear++; }
+  if (monthIdx < 0) { monthIdx = 11; currentYear--; }
+  document.getElementById('monthName').textContent = months[monthIdx] + ' ' + currentYear;
+}
+
+function setTodayDate() {
+  const d = new Date();
+  document.getElementById('txnDate').value = d.toISOString().split('T')[0];
+}
+
+// ─── TRANSACTIONS ───
+function renderTransactions() {
+  const list = document.getElementById('txnList');
+  const catColors = { food:'rgba(252,184,92,0.15)', transport:'rgba(124,92,252,0.15)', study:'rgba(92,244,200,0.15)', fun:'rgba(252,92,125,0.15)', income:'rgba(92,244,200,0.15)', other:'rgba(150,150,150,0.15)' };
+  list.innerHTML = transactions.map(t => `
+    <div class="txn-item">
+      <div class="txn-icon" style="background:${catColors[t.cat]||catColors.other}">${t.icon}</div>
+      <div class="txn-info">
+        <div class="txn-name">${t.desc}</div>
+        <div class="txn-cat">${t.cat.charAt(0).toUpperCase()+t.cat.slice(1)} · ${t.date}</div>
+      </div>
+      <div class="txn-amt ${t.type==='income'?'pos':'neg'}">${t.type==='income'?'+':'-'}₹${t.amt.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+function addTransaction() {
+  const type = document.getElementById('txnType').value;
+  const amt = parseFloat(document.getElementById('txnAmt').value);
+  const desc = document.getElementById('txnDesc').value.trim();
+  const cat = document.getElementById('txnCat').value;
+  const date = document.getElementById('txnDate').value;
+  if (!amt || !desc) { showToast('⚠️ Fill in amount and description!'); return; }
+  const icons = { food:'🍔', transport:'🚌', study:'📚', fun:'🎮', income:'💰', other:'📦' };
+  transactions.unshift({ id: Date.now(), type, desc, cat, amt, date, icon: icons[cat]||'📦' });
+  renderTransactions();
+  document.getElementById('addModal').style.display = 'none';
+  document.getElementById('txnAmt').value = '';
+  document.getElementById('txnDesc').value = '';
+  showToast(`✅ ${type === 'income' ? 'Income' : 'Expense'} of ₹${amt} added!`);
+}
+
+// ─── CHARTS ───
+function renderDonut() {
+  const c = document.getElementById('donutChart');
+  const ctx = c.getContext('2d');
+  const data = [31, 10, 17, 8, 34];
+  const colors = ['#fcb85c','#7c5cfc','#5cf4c8','#fc5c7d','#888'];
+  let start = -Math.PI / 2;
+  const total = data.reduce((a,b)=>a+b,0);
+  const cx = 65, cy = 65, r = 50, ir = 34;
+  ctx.clearRect(0,0,130,130);
+  data.forEach((v,i) => {
+    const angle = (v/total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+angle);
+    ctx.closePath();
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+    start += angle;
+  });
+  ctx.beginPath();
+  ctx.arc(cx,cy,ir,0,2*Math.PI);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#13131a';
+  ctx.fill();
+}
+
+function renderTrendChart() {
+  const c = document.getElementById('trendChart');
+  const ctx = c.getContext('2d');
+  const w = c.offsetWidth || 900; c.width = w;
+  const h = 80; c.height = h;
+  const expData = [8200, 11000, 9800, 13200, 10900, 12340];
+  const incData = [15000, 16500, 14000, 17500, 16000, 18500];
+  const labels = ['Oct','Nov','Dec','Jan','Feb','Mar'];
+  const pad = 40;
+  const maxV = 20000;
+  function drawLine(data, color, fill) {
+    const pts = data.map((v,i) => ({ x: pad + (i/(data.length-1))*(w-2*pad), y: h-10 - (v/maxV)*(h-20) }));
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts.slice(1).forEach(p => ctx.lineTo(p.x,p.y));
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+    if (fill) {
+      ctx.lineTo(pts[pts.length-1].x, h-10);
+      ctx.lineTo(pts[0].x, h-10);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0,0,0,h);
+      g.addColorStop(0, color+'44'); g.addColorStop(1, color+'00');
+      ctx.fillStyle = g; ctx.fill();
+    }
+    pts.forEach(p => { ctx.beginPath(); ctx.arc(p.x,p.y,3,0,2*Math.PI); ctx.fillStyle=color; ctx.fill(); });
+  }
+  ctx.clearRect(0,0,w,h);
+  ctx.font = '11px DM Sans'; ctx.fillStyle = '#6666aa';
+  labels.forEach((l,i) => { const x = pad + (i/(labels.length-1))*(w-2*pad); ctx.fillText(l, x-8, h-1); });
+  drawLine(incData, '#5cf4c8', true);
+  drawLine(expData, '#fc5c7d', true);
+}
+
+// ─── TIPS ───
+function renderSmartTip() {
+  document.getElementById('smartTip').textContent = tips[tipIdx % tips.length];
+}
+function nextTip() { tipIdx++; renderSmartTip(); }
+
+// ─── SUGGESTIONS ───
+function renderSuggestions(filter) {
+  const grid = document.getElementById('sugGrid');
+  const filtered = filter==='all' ? suggestions : suggestions.filter(s=>s.cat.includes(filter));
+  grid.innerHTML = filtered.map(s => `
+    <div class="sug-card ${s.class}" onclick="showToast('Opening: ${s.title}...')">
+      <div class="sug-icon">${s.icon}</div>
+      <div class="sug-title">${s.title}</div>
+      <div class="sug-desc">${s.desc}</div>
+      <div class="sug-meta">${s.badges.map(b=>`<span class="sug-badge ${b.c}">${b.t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+  document.getElementById('stockWidget').style.display = (filter==='all'||filter==='invest') ? 'block' : 'none';
+}
+
+function filterSuggestions(cat, el) {
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderSuggestions(cat);
+}
+
+// ─── STOCKS ───
+function renderStocks() {
+  document.getElementById('stockList').innerHTML = stocksData.map(s => `
+    <div class="stock-item">
+      <div class="stock-sym">${s.sym}</div>
+      <div class="stock-price">${s.price}</div>
+      <div class="stock-chg ${s.dir}">${s.chg}</div>
+      <canvas class="sparkline" id="spark-${s.sym.replace(/\s/g,'')}" height="30" width="100"></canvas>
+    </div>
+  `).join('');
+  stocksData.forEach(s => drawSparkline(`spark-${s.sym.replace(/\s/g,'')}`, s.spark, s.dir==='up'?'#5cf4c8':'#fc5c7d'));
+}
+
+function drawSparkline(id, data, color) {
+  const c = document.getElementById(id); if (!c) return;
+  const ctx = c.getContext('2d');
+  const w = 100, h = 30;
+  const min = Math.min(...data), max = Math.max(...data);
+  const pts = data.map((v,i) => ({ x: (i/(data.length-1))*w, y: h - ((v-min)/(max-min||1))*(h-4) - 2 }));
+  ctx.clearRect(0,0,w,h);
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.slice(1).forEach(p => ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+// ─── BLOG ───
+let postGroupSelected = 'General';
+function setPostGroup(g) { postGroupSelected = g; showToast(`Group set: ${g}`); }
+
+function renderPosts(posts) {
+  document.getElementById('postsFeed').innerHTML = posts.map(p => `
+    <div class="post-card" id="post-${p.id}">
+      <div class="post-header">
+        <div class="post-avatar" style="background:${p.color}">${p.avatar}</div>
+        <div class="post-meta">
+          <div class="post-author">${p.author} <span class="post-group">${p.group}</span></div>
+          <div class="post-time">${p.time}</div>
+        </div>
+      </div>
+      <div class="post-title">${p.title}</div>
+      <div class="post-body">${p.body}</div>
+      <div class="post-tags">${p.tags.map(t=>`<span class="post-tag">#${t}</span>`).join('')}</div>
+      <div class="post-actions">
+        <button class="post-action ${p.liked?'liked':''}" onclick="toggleLike(${p.id})">
+          ${p.liked?'❤️':'🤍'} <span id="likes-${p.id}">${p.likes}</span>
+        </button>
+        <button class="post-action" onclick="showToast('💬 Comments coming soon!')">💬 ${p.comments}</button>
+        <button class="post-action" onclick="showToast('🔗 Link copied!')">🔗 Share</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleLike(id) {
+  const post = postsData.find(p=>p.id===id);
+  if (!post) return;
+  post.liked = !post.liked;
+  post.likes += post.liked ? 1 : -1;
+  renderPosts(postsData);
+}
+
+function submitPost() {
+  const txt = document.getElementById('newPostText').value.trim();
+  if (!txt) { showToast('✍️ Write something first!'); return; }
+  const newPost = {
+    id: Date.now(),
+    author: 'Arjun K.',
+    avatar: 'AK',
+    color: '#7c5cfc',
+    group: postGroupSelected,
+    time: 'Just now',
+    title: txt.slice(0,60) + (txt.length>60?'...':''),
+    body: txt,
+    tags: ['StudentLife'],
+    likes: 0,
+    comments: 0,
+    liked: false,
+  };
+  postsData.unshift(newPost);
+  renderPosts(postsData);
+  document.getElementById('newPostText').value = '';
+  showToast('🎉 Post shared with the community!');
+}
+
+function filterByTag(tag) {
+  const filtered = postsData.filter(p => p.tags.some(t=>t.toLowerCase()===tag.toLowerCase()) || p.title.includes(tag) || p.body.includes(tag));
+  renderPosts(filtered.length ? filtered : postsData);
+  showToast(`🏷️ Showing posts tagged #${tag}`);
+}
+
+function renderGroups() {
+  document.getElementById('groupsList').innerHTML = groups.map((g,i) => `
+    <div class="group-item">
+      <div class="group-icon">${g.icon}</div>
+      <div>
+        <div class="group-name">${g.name}</div>
+        <div class="group-members">${g.members} members</div>
+      </div>
+      <button class="join-btn ${g.joined?'joined':''}" onclick="toggleJoin(${i})">${g.joined?'Joined':'Join'}</button>
+    </div>
+  `).join('');
+}
+
+function toggleJoin(i) {
+  groups[i].joined = !groups[i].joined;
+  renderGroups();
+  showToast(groups[i].joined ? `✅ Joined ${groups[i].name}!` : `Left ${groups[i].name}`);
+}
+
+function renderLeaderboard() {
+  document.getElementById('leaderboard').innerHTML = leaderboard.map(l => `
+    <div style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0;">
+      <div style="font-family:'Syne',sans-serif;font-size:0.75rem;color:var(--text3);width:14px;">${l.rank}.</div>
+      <div style="flex:1;font-size:0.78rem;font-weight:500;">${l.name}</div>
+      <div style="font-size:0.75rem;color:var(--income);font-weight:600;">${l.saved}</div>
+      <div style="font-size:0.68rem;color:var(--text3);">${l.pct}</div>
+    </div>
+  `).join('');
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Close modal on backdrop click
+document.getElementById('addModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+</body>
+</html>
